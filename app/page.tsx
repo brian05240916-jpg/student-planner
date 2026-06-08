@@ -2,104 +2,83 @@
 import { useState, useEffect } from 'react';
 
 export default function Home() {
-  // --- 狀態管理 ---
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-
+  // 系統狀態
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoginView, setIsLoginView] = useState(true);
+  const [user, setUser] = useState({ username: '', password: '' });
+  
+  // 功能狀態
   const [tasks, setTasks] = useState<{ text: string; date: string }[]>([]);
   const [taskInput, setTaskInput] = useState('');
   const [dateInput, setDateInput] = useState('');
-
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
 
-  // --- 登入邏輯 ---
-  const handleLogin = () => {
-    // 規則：長度 >= 8，首字大寫，包含中英文 (Regex 簡單檢查)
-    const isValid = password.length >= 8 && /^[A-Z]/.test(password);
-    if (isValid) {
-      setIsAuthenticated(true);
-    } else {
-      setError('密碼需 8 碼以上且首字大寫，並包含中英文');
-    }
+  // 密碼規則驗證：8碼以上，首字大寫，且包含中英文
+  const validate = (pwd: string) => {
+    const isLengthValid = pwd.length >= 8;
+    const isFirstUpper = /^[A-Z]/.test(pwd);
+    const hasChinese = /[\u4e00-\u9fa5]/.test(pwd);
+    const hasEnglish = /[a-zA-Z]/.test(pwd);
+    return isLengthValid && isFirstUpper && hasChinese && hasEnglish;
   };
 
-  // --- 番茄鐘計時器 ---
+  // 番茄鐘邏輯
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft === 0) {
-      setIsActive(false);
-      alert('時間到！休息一下吧！');
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
-  // --- 功能函式 ---
-  const addTask = () => {
-    if (taskInput && dateInput) {
-      setTasks([...tasks, { text: taskInput, date: dateInput }]);
-      setTaskInput('');
+  // 登入/註冊動作
+  const handleAuth = () => {
+    if (validate(user.password)) {
+      setIsLoggedIn(true);
+    } else {
+      alert('密碼格式錯誤：需8碼以上、首字大寫、且包含中英文！');
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
-  // --- 渲染畫面 ---
-  if (!isAuthenticated) {
+  // --- 畫面渲染 ---
+  if (!isLoggedIn) {
     return (
-      <main className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="p-8 bg-white shadow-md rounded-lg text-center">
-          <h1 className="text-2xl font-bold mb-4">學生規劃器 - 登入</h1>
-          <input 
-            type="password" 
-            className="border p-2 rounded mb-2 w-full text-black"
-            placeholder="請輸入密碼"
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button onClick={handleLogin} className="bg-blue-600 text-white px-6 py-2 rounded w-full">
-            進入系統
-          </button>
-          {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
-          <p className="mt-4 text-xs text-gray-400">解鎖完整版費用：100元</p>
+      <main className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+          <h1 className="text-2xl font-bold text-center mb-6">{isLoginView ? '系統登入' : '帳號註冊'}</h1>
+          <input className="w-full border p-3 rounded-lg mb-3" placeholder="帳號" onChange={(e) => setUser({...user, username: e.target.value})} />
+          <input type="password" className="w-full border p-3 rounded-lg mb-4" placeholder="密碼 (需首字大寫、含中英文)" onChange={(e) => setUser({...user, password: e.target.value})} />
+          <button onClick={handleAuth} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">{isLoginView ? '進入系統' : '註冊帳號'}</button>
+          <button onClick={() => setIsLoginView(!isLoginView)} className="w-full mt-4 text-sm text-blue-500 underline">{isLoginView ? '沒有帳號？去註冊' : '已有帳號？去登入'}</button>
+          <div className="mt-8 pt-6 border-t text-center text-sm text-gray-400">
+            <p>解鎖完整版：100元</p>
+            <p>匯款帳號：012-3456-7890</p>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="p-6 max-w-xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-center">學生規劃器</h1>
-
+    <main className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">歡迎回來，{user.username}</h1>
+      
       {/* 番茄鐘 */}
-      <div className="p-6 bg-red-50 border border-red-200 rounded-lg mb-6 text-center">
-        <h2 className="text-4xl font-mono">{formatTime(timeLeft)}</h2>
-        <button onClick={() => setIsActive(!isActive)} className="bg-red-500 text-white px-6 py-2 mt-4 rounded">
-          {isActive ? '暫停' : '開始工作'}
-        </button>
+      <div className="bg-red-50 p-6 rounded-xl border border-red-200 text-center mb-6">
+        <div className="text-5xl font-mono mb-4">{Math.floor(timeLeft/60)}:{String(timeLeft%60).padStart(2,'0')}</div>
+        <button onClick={() => setIsActive(!isActive)} className="bg-red-500 text-white px-6 py-2 rounded-lg">{isActive ? '暫停' : '開始工作'}</button>
       </div>
 
-      {/* 任務輸入 */}
-      <div className="flex flex-col gap-2 mb-6">
-        <input className="border p-2 rounded" placeholder="任務名稱" value={taskInput} onChange={(e) => setTaskInput(e.target.value)} />
+      {/* 任務區 */}
+      <div className="flex gap-2 mb-6">
+        <input className="flex-1 border p-2 rounded" value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="任務名稱" />
         <input type="date" className="border p-2 rounded" value={dateInput} onChange={(e) => setDateInput(e.target.value)} />
-        <button onClick={addTask} className="bg-blue-600 text-white p-2 rounded">新增任務</button>
+        <button onClick={() => setTasks([...tasks, { text: taskInput, date: dateInput }])} className="bg-blue-600 text-white px-4 py-2 rounded">新增</button>
       </div>
 
-      {/* 列表 */}
       <ul className="space-y-2">
-        {tasks.map((t, i) => (
-          <li key={i} className="border p-3 rounded flex justify-between shadow-sm">
-            <span>{t.text}</span>
-            <span className="text-gray-400">{t.date}</span>
-          </li>
-        ))}
+        {tasks.map((t, i) => <li key={i} className="border p-3 rounded flex justify-between"><span>{t.text}</span><span>{t.date}</span></li>)}
       </ul>
     </main>
   );
